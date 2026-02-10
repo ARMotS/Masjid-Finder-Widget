@@ -1,6 +1,6 @@
 """Widget-specific API endpoints optimized for Android and iOS widgets."""
 
-from datetime import datetime, date, time, timedelta
+from datetime import datetime, date, time, timedelta, timezone
 from typing import Optional, List, Dict, Any
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select, func, text
@@ -40,7 +40,12 @@ def _format_countdown(seconds: Optional[int]) -> Optional[str]:
 
 def _get_sast_now() -> datetime:
     """Get current time in South Africa Standard Time (UTC+2)."""
-    return datetime.utcnow() + SAST_OFFSET
+    return datetime.now(timezone.utc) + SAST_OFFSET
+
+
+def _get_sast_date() -> date:
+    """Get current date in South Africa Standard Time (UTC+2)."""
+    return _get_sast_now().date()
 
 
 @router.get("/mosques/nearby")
@@ -257,8 +262,8 @@ async def get_mosque_timetable(
     if not mosque:
         raise HTTPException(status_code=404, detail="Mosque not found")
     
-    # Get today's prayer times
-    today = date.today()
+    # Get today's prayer times (use SAST timezone)
+    today = _get_sast_date()
     result = await db.execute(
         select(PrayerTime)
         .where(PrayerTime.mosque_id == mosque_id)
@@ -332,7 +337,8 @@ async def get_nearby_timetables(
     Returns:
         List of nearby mosques with their complete prayer timetables
     """
-    today = date.today()
+    # Use SAST timezone for "today"
+    today = _get_sast_date()
     
     # Haversine formula for distance calculation
     haversine_formula = text(f"""

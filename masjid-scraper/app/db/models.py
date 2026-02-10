@@ -1,6 +1,6 @@
 """SQLAlchemy ORM models for mosques, prayer times, and scrape logs."""
 
-from datetime import datetime, date, time
+from datetime import datetime, date, time, timezone
 from typing import List, Optional
 from sqlalchemy import String, Text, Numeric, DateTime, Date, Time, Integer, ForeignKey, UniqueConstraint, Index
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
@@ -26,8 +26,8 @@ class Mosque(Base):
     website: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
     keywords: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     region: Mapped[str] = mapped_column(String(50), nullable=False)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
-    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
     
     # Relationship to prayer times
     prayer_times: Mapped[List["PrayerTime"]] = relationship("PrayerTime", back_populates="mosque", cascade="all, delete-orphan")
@@ -54,8 +54,8 @@ class PrayerTime(Base):
     maghrib: Mapped[Optional[time]] = mapped_column(Time, nullable=True)
     isha: Mapped[Optional[time]] = mapped_column(Time, nullable=True)
     iqamah_times: Mapped[Optional[dict]] = mapped_column(JSONB, nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
-    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
     
     # Relationship back to mosque
     mosque: Mapped["Mosque"] = relationship("Mosque", back_populates="prayer_times")
@@ -73,7 +73,7 @@ class ScrapeLog(Base):
     __tablename__ = "scrape_logs"
     
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    started_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.utcnow)
+    started_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
     finished_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
     status: Mapped[str] = mapped_column(String(50), default="running")
     region: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)

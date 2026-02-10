@@ -2,7 +2,7 @@
 
 import asyncio
 import re
-from datetime import datetime, date, time
+from datetime import datetime, date, time, timedelta, timezone
 from typing import Dict, List, Optional, Tuple, Any
 from contextlib import asynccontextmanager
 
@@ -30,6 +30,9 @@ PRAYER_ALIASES = {
     "maghrib": "maghrib",
     "isha": "isha",
 }
+
+# South Africa Standard Time offset (UTC+2)
+SAST_OFFSET = timedelta(hours=2)
 
 
 class MasjidBoardScraper:
@@ -102,7 +105,7 @@ class MasjidBoardScraper:
         
         # Create scrape log entry
         log = ScrapeLog(
-            started_at=datetime.utcnow(),
+            started_at=datetime.now(timezone.utc),
             status="running",
             region=region_code,
         )
@@ -129,14 +132,14 @@ class MasjidBoardScraper:
                     print(error_msg)
             
             # Update log as completed
-            log.finished_at = datetime.utcnow()
+            log.finished_at = datetime.now(timezone.utc)
             log.status = "completed"
             log.mosques_scraped = mosques_scraped
             log.errors = "\n".join(errors) if errors else None
             
         except Exception as e:
             # Update log as failed
-            log.finished_at = datetime.utcnow()
+            log.finished_at = datetime.now(timezone.utc)
             log.status = "failed"
             log.errors = str(e)
             raise
@@ -336,8 +339,10 @@ class MasjidBoardScraper:
             CSS selectors are illustrative and need to be adjusted based on
             the actual DOM structure of MasjidBoardLive.com
         """
+        # Get current date in SAST timezone
+        sast_now = datetime.now(timezone.utc) + SAST_OFFSET
         prayer_data = {
-            "date": date.today(),
+            "date": sast_now.date(),
             "iqamah_times": {}
         }
         
@@ -434,7 +439,7 @@ class MasjidBoardScraper:
                 "phone": stmt.excluded.phone,
                 "website": stmt.excluded.website,
                 "keywords": stmt.excluded.keywords,
-                "updated_at": datetime.utcnow(),
+                "updated_at": datetime.now(timezone.utc),
             }
         ).returning(Mosque.id)
         
@@ -464,7 +469,7 @@ class MasjidBoardScraper:
                 "maghrib": stmt.excluded.maghrib,
                 "isha": stmt.excluded.isha,
                 "iqamah_times": stmt.excluded.iqamah_times,
-                "updated_at": datetime.utcnow(),
+                "updated_at": datetime.now(timezone.utc),
             }
         )
         

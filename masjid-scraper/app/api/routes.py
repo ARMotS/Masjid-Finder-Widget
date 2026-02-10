@@ -1,6 +1,6 @@
 """Core REST API endpoints for mosques, prayer times, and stats."""
 
-from datetime import date
+from datetime import date, timedelta, timezone
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select, func
@@ -12,6 +12,16 @@ from app.scraper.regions import REGIONS, is_valid_region
 
 
 router = APIRouter(prefix="/api", tags=["core"])
+
+
+# South Africa Standard Time offset (UTC+2)
+SAST_OFFSET = timedelta(hours=2)
+
+
+def _get_sast_date() -> date:
+    """Get current date in South Africa Standard Time (UTC+2)."""
+    from datetime import datetime
+    return (datetime.now(timezone.utc) + SAST_OFFSET).date()
 
 
 @router.get("/mosques")
@@ -131,8 +141,8 @@ async def get_mosque_prayer_times(
     if not mosque:
         raise HTTPException(status_code=404, detail="Mosque not found")
     
-    # Parse date
-    target_date = date.today()
+    # Parse date (use SAST timezone for "today")
+    target_date = _get_sast_date()
     if date_param:
         try:
             target_date = date.fromisoformat(date_param)
@@ -178,7 +188,8 @@ async def get_today_prayer_times(
     Returns:
         List of mosques with their prayer times for today
     """
-    today = date.today()
+    # Use SAST timezone for "today"
+    today = _get_sast_date()
     
     query = (
         select(Mosque, PrayerTime)
