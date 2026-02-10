@@ -1,0 +1,42 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: masjid-db
+    environment:
+      POSTGRES_USER: masjid_user
+      POSTGRES_PASSWORD: masjid_pass
+      POSTGRES_DB: masjid_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./schema.sql:/docker-entrypoint-initdb.d/schema.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U masjid_user -d masjid_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build: .
+    container_name: masjid-api
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    environment:
+      DATABASE_URL: postgresql+asyncpg://masjid_user:masjid_pass@db:5432/masjid_db
+      SYNC_DATABASE_URL: postgresql://masjid_user:masjid_pass@db:5432/masjid_db
+      DEBUG: "True"
+      SCRAPE_INTERVAL_HOURS: 6
+      REQUEST_DELAY_SECONDS: 1.5
+      BASE_URL: https://masjidboardlive.com
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./app:/app/app
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
